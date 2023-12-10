@@ -1,54 +1,37 @@
-const https = require('https');
 const express = require('express');
 const app = express();
-const port = 3000;
 
-function getAsteroidsData(options, onResult) {
-    console.log('called');
-    let output = '';
-    console.log('before request');
-    const req = https.request(options, (res) => {
-        console.log(`${options.hostname} : ${res.statusCode}`);
-        res.setEncoding('utf8');
+const constants = require('./config/constants');
+const nasaRequestConfig = require('./config/nasaRequestConfig');
+const neoHelpers = require('./helpers/neoDataHelpers');
+const requestHelpers = require('./helpers/requestHelpers');
 
-        res.on('data', (chunk) => {
-            output += chunk;
+app.get('/getNeosNames', (req, res) => {
+    let queryParamsValidationResult = requestHelpers.validateQueryParameters(req);
+    if (queryParamsValidationResult.valid) {
+        const options = {
+            hostname: nasaRequestConfig.hostname,
+            port: nasaRequestConfig.port,
+            // path: '/neo/rest/v1/feed?end_date=2023-09-08&api_key=efg0tcb32DfWc1pPkpHg9bKTTzz3NGXrsEeptKRe',
+            path: requestHelpers.buildRequestPath(req),
+            method: nasaRequestConfig.method,
+            headers: {
+                'Content-Type': nasaRequestConfig.jsonContentType
+            }
+        };
+
+        neoHelpers.getNeosNames(options, queryParamsValidationResult.rangeKilometers, (statusCode, result) => {
+            res.statusCode = statusCode;
+            res.send(result);
         });
-
-        res.on('end', () => {
-            let obj = JSON.parse(output);
-
-            onResult(res.statusCode, obj);
-        });
-    });
-
-    req.on('error', (err) => {
-        console.log('error: ' + err.message);
-        // res.send('error: ' + err.message);
-    });
-
-    req.end();
-}
-
-app.get('/', (req, res) => {
-    const options = {
-        hostname: 'api.nasa.gov',
-        port: 443,
-        path: '/neo/rest/v1/feed?start_date=2023-09-07&end_date=2023-09-08&api_key=efg0tcb32DfWc1pPkpHg9bKTTzz3NGXrsEeptKRe',
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    };
-
-    getAsteroidsData(options, (statusCode, result) => {
-        res.statusCode = statusCode;
-        res.send(result);
-    });
+    } else {
+        res.statusCode = queryParamsValidationResult.statusCode;
+        res.send(queryParamsValidationResult.response);
+    }
 
     // res.send('Hello World');
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+app.listen(constants.listeningPort, () => {
+    console.log(`Server is running on port ${constants.listeningPort}`);
 });
