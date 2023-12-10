@@ -66,7 +66,7 @@ function validateQueryParameters(req) {
 
     if (!req.query.within) {
         validationResult.valid = false;
-        validationResult.statusCode = constants.statusCode400; //res.statusCode = 400;
+        validationResult.statusCode = constants.statusCode400;
         validationResult.response = {
             error: true,
             message: 'Please provide a "within" parameter to define range of search.'
